@@ -5,14 +5,22 @@
     android:orientation="vertical">
 
     <EditText
-        android:id="@+id/searchEditText"
+        android:id="@+id/nameSearchEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Search Apps"
+        android:hint="Search Apps According to Name"
+        android:padding="16dp"/>
+
+
+    <EditText
+        android:id="@+id/versionSearchEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Search Apps According to Version"
         android:padding="16dp"/>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recyclerView"
+        android:id="@+id/showingAppRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 

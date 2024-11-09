@@ -26,7 +26,8 @@ class MainActivity : FragmentActivity() {
     private lateinit var appDao: InstalledAppDao
     private lateinit var appAdapter: AppAdapter
     private lateinit var recyclerView: RecyclerView
-    private lateinit var searchEditText: EditText
+    private lateinit var nameSearchEditText: EditText
+    private lateinit var versionSearchEditText: EditText
     private lateinit var allApps: List<InstalledApp>
     private val TAG = "MainActivityTAG"
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,8 +37,10 @@ class MainActivity : FragmentActivity() {
         db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "app_database").build()
         appDao = db.installedAppDao()
 
-        recyclerView = findViewById(R.id.recyclerView)
-        searchEditText = findViewById(R.id.searchEditText)
+        recyclerView = findViewById(R.id.showingAppRecyclerView)
+        nameSearchEditText = findViewById(R.id.nameSearchEditText)
+
+        versionSearchEditText = findViewById(R.id.versionSearchEditText)
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         appAdapter = AppAdapter(emptyList())
@@ -47,14 +50,12 @@ class MainActivity : FragmentActivity() {
         loadApps()
 
         // 设置搜索框监听器
-        searchEditText.addTextChangedListener(object : TextWatcher {
+        nameSearchEditText.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 val query = s.toString()
-                Log.e(TAG, "afterTextChanged:query ${query}", )
+                Log.e(TAG, "nameSearchEditText afterTextChanged:query ${query}", )
                 if (query.isNotEmpty()) {
-                    searchApps(query)
-                } else {
-                    loadApps()  // 如果没有输入内容，则加载所有应用
+                    searchAppsAccordingName(query)
                 }
             }
 
@@ -62,6 +63,24 @@ class MainActivity : FragmentActivity() {
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
+
+
+        versionSearchEditText.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val query = s.toString()
+                Log.e(TAG, "versionSearchEditText afterTextChanged:query ${query}", )
+                if (query.isNotEmpty()) {
+                    searchAppsAccordingVersion(query)
+                }
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+
+        // 每次打开App时，刷新应用数据库
+        updateInstalledApps()
     }
 
     private fun loadApps() {
@@ -75,26 +94,40 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    private fun searchApps(query: String) {
+    private fun searchAppsAccordingName(query: String) {
         CoroutineScope(Dispatchers.IO).launch {
-            val filteredApps = appDao.searchApps("%$query%")
+            val filteredApps = appDao.searchAppsAccordingName("%$query%")
             withContext(Dispatchers.Main) {
                 appAdapter = AppAdapter(filteredApps)
                 recyclerView.adapter = appAdapter
+                postRefreshLoadedApps(filteredApps)
             }
         }
     }
 
 
-    override fun onResume() {
-        super.onResume()
-        // 每次打开App时，刷新应用数据库
-        updateInstalledApps()
+    private fun searchAppsAccordingVersion(query: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            val filteredApps = appDao.searchAppsAccordingVerison("%$query%")
+            withContext(Dispatchers.Main) {
+                appAdapter = AppAdapter(filteredApps)
+                recyclerView.adapter = appAdapter
+                postRefreshLoadedApps(filteredApps)
+            }
+        }
+    }
+
+    private fun postRefreshLoadedApps(filteredApps: List<InstalledApp>) {
+        recyclerView.post {
+            if (filteredApps.isNullOrEmpty()) {
+                updateInstalledApps()
+            }
+        }
     }
 
     private fun updateInstalledApps() {
-        val apps = getInstalledApps(this)
         CoroutineScope(Dispatchers.IO).launch {
+            val apps = getInstalledApps(this@MainActivity)
             for (app in apps) {
                 appDao.insertApp(app)
             }
@@ -107,7 +140,9 @@ class MainActivity : FragmentActivity() {
         val apps = mutableListOf<InstalledApp>()
 
         val installedPackages = packageManager.getInstalledApplications(0)
-        Toast.makeText(this, "number: ${installedPackages.size}", Toast.LENGTH_SHORT).show()
+        recyclerView.post {
+            Toast.makeText(this, "find ${installedPackages.size} apps", Toast.LENGTH_SHORT).show()
+        }
         for (appInfo in installedPackages) {
             try {
                 val appName = packageManager.getApplicationLabel(appInfo).toString()

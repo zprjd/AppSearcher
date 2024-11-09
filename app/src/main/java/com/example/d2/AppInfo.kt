@@ -31,9 +31,14 @@ interface InstalledAppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertApp(app: InstalledApp)
 
-    @Query("SELECT * FROM installed_apps WHERE app_name LIKE '%' || :query || '%'")
+    @Query("SELECT * FROM installed_apps WHERE app_name LIKE '%' || :name || '%'")
 //    @Query("SELECT * FROM installed_apps WHERE app_name LIKE :query")
-    fun searchApps(query: String): List<InstalledApp>
+    fun searchAppsAccordingName(name: String): List<InstalledApp>
+
+
+    @Query("SELECT * FROM installed_apps WHERE version LIKE '%' || :version || '%'")
+//    @Query("SELECT * FROM installed_apps WHERE app_name LIKE :query")
+    fun searchAppsAccordingVerison(version: String): List<InstalledApp>
 
     @Query("SELECT * FROM installed_apps")
     fun getAllApps(): List<InstalledApp>
