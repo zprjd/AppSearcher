@@ -8,7 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class AppAdapter(private val appList: List<InstalledApp>) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
+class AppAdapter(var appList: List<InstalledApp>) : RecyclerView.Adapter<AppAdapter.AppViewHolder>() {
 
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppViewHolder {
