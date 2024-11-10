@@ -40,6 +40,11 @@ interface InstalledAppDao {
 //    @Query("SELECT * FROM installed_apps WHERE app_name LIKE :query")
     fun searchAppsAccordingVerison(version: String): List<InstalledApp>
 
+    // 新增的根据名称和版本搜索并取交集的方法
+    @Query("SELECT * FROM installed_apps WHERE app_name LIKE '%' || :name || '%'" +
+            " AND version LIKE '%' || :version || '%'")
+    fun searchAppsAccordingNameAndVersion(name: String, version: String): List<InstalledApp>;
+
     @Query("SELECT * FROM installed_apps")
     fun getAllApps(): List<InstalledApp>
 }

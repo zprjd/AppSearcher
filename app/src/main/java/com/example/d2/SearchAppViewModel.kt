@@ -22,7 +22,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val db: AppDatabase = Room.databaseBuilder(application, AppDatabase::class.java, "app_database").build()
     private val appDao: InstalledAppDao
 
-    // LiveData 用于 UI 更新
     private val _apps = MutableLiveData<List<InstalledApp>>()
     val apps: LiveData<List<InstalledApp>> get() = _apps
 
@@ -30,9 +29,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         appDao = db.installedAppDao()
     }
 
+    fun filterApps(nameQuery: String, versionQuery: String, context: Context) {
+        if (nameQuery.isEmpty() && versionQuery.isEmpty()) {
+            Toast.makeText(context, "null",  Toast.LENGTH_SHORT).show()
+            loadAllApps()
+            return
+        }
 
-    // 加载所有应用
-    fun loadApps() {
+        if (nameQuery.isEmpty()) {
+            searchAppsAccordingVersion(versionQuery, context)
+            return
+        }
+
+        if (versionQuery.isEmpty()) {
+            searchAppsAccordingName(nameQuery, context)
+            return
+        }
+
+        if (nameQuery.isNotEmpty() && versionQuery.isNotEmpty()) {
+            searchAppsAccordingNameAndVersion(nameQuery, versionQuery, context)
+        }
+    }
+
+    fun loadAllApps() {
         CoroutineScope(Dispatchers.IO).launch {
             val allApps = appDao.getAllApps()
             withContext(Dispatchers.Main) {
@@ -42,37 +61,55 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // 根据名称搜索应用
-    fun searchAppsAccordingName(query: String) {
+    fun searchAppsAccordingName(query: String, context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
-            val filteredApps = appDao.searchAppsAccordingName("%$query%")
+            var filteredApps = appDao.searchAppsAccordingName("%$query%")
+            if (filteredApps.isNullOrEmpty()) {
+                updateInstalledApps(context)
+                filteredApps = appDao.searchAppsAccordingName("%$query%")
+            }
             withContext(Dispatchers.Main) {
                 _apps.value = filteredApps
             }
         }
     }
 
-    // 根据版本搜索应用
-    fun searchAppsAccordingVersion(query: String) {
+    fun searchAppsAccordingVersion(query: String, context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
-            val filteredApps = appDao.searchAppsAccordingVerison("%$query%")
+            var filteredApps = appDao.searchAppsAccordingVerison("%$query%")
+            if (filteredApps.isNullOrEmpty()) {
+                updateInstalledApps(context)
+                filteredApps = appDao.searchAppsAccordingVerison("%$query%")
+            }
             withContext(Dispatchers.Main) {
                 _apps.value = filteredApps
             }
         }
     }
 
-    // 更新安装的应用
+    fun searchAppsAccordingNameAndVersion(nameQuery: String, versionQuery: String, context: Context) {
+        CoroutineScope(Dispatchers.IO).launch {
+            var filteredApps = appDao.searchAppsAccordingNameAndVersion("%$nameQuery%", "%$versionQuery%")
+            if (filteredApps.isNullOrEmpty()) {
+                updateInstalledApps(context)
+                filteredApps = appDao.searchAppsAccordingNameAndVersion("%$nameQuery%", "%$versionQuery%")
+            }
+            withContext(Dispatchers.Main) {
+                _apps.value = filteredApps
+            }
+        }
+    }
+
     fun updateInstalledApps(context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             val apps = getInstalledApps(context)
             for (app in apps) {
                 appDao.insertApp(app)
             }
-            loadApps() // 更新应用列表
+            loadAllApps() // 更新应用列表
         }
     }
 
-    // 获取已安装的应用
     private fun getInstalledApps(context: Context): List<InstalledApp> {
         val packageManager = context.packageManager
         val apps = mutableListOf<InstalledApp>()
@@ -94,7 +131,6 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         return apps
     }
 
-    // 将 Bitmap 转换为 ByteArray
     private fun getByteArrayFromBitmap(bitmap: Bitmap): ByteArray {
         val byteArrayOutputStream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream)

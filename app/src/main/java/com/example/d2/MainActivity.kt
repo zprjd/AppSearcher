@@ -15,12 +15,6 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.room.Room
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 
 class MainActivity : FragmentActivity() {
 
@@ -52,41 +46,22 @@ class MainActivity : FragmentActivity() {
             appAdapter.appList = apps
             appAdapter.notifyDataSetChanged()
         })
-
-        nameSearchEditText.addTextChangedListener(object : TextWatcher {
+        val textWatcher = object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                val query = s.toString()
-                if (query.isNotEmpty()) {
-                    appViewModel.searchAppsAccordingName(query)
-                }
+                val nameQuery = nameSearchEditText.text.toString()
+                val versionQuery = versionSearchEditText.text.toString()
+
+                appViewModel.filterApps(nameQuery, versionQuery, this@MainActivity)
             }
 
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
-        initEditText(nameSearchEditText) { query ->
-            appViewModel.searchAppsAccordingName(query)
         }
-        initEditText(versionSearchEditText) { query ->
-            appViewModel.searchAppsAccordingVersion(query)
-        }
+        nameSearchEditText.addTextChangedListener(textWatcher)
+        versionSearchEditText.addTextChangedListener(textWatcher)
 
-        appViewModel.loadApps()
+        appViewModel.loadAllApps()
 
         appViewModel.updateInstalledApps(this)
-    }
-
-    private fun initEditText(editText: EditText, searchFunc: (String) -> Unit) {
-        editText.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {
-                val query = s.toString()
-                if (query.isNotEmpty()) {
-                    searchFunc.invoke(query)
-                }
-            }
-
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
     }
 }
